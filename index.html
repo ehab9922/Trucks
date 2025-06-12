@@ -309,3 +309,254 @@
                 min-width: 900px;
             }
         }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 מערכת ניהול הובלות משאיות</h1>
+            <p>מערכת מקיפה לניהול פעילות הובלה ושילוח</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card revenue">
+                <div class="stat-number" id="totalRevenue">0 ₪</div>
+                <div class="stat-label">סה"כ הכנסות</div>
+            </div>
+            <div class="stat-card vat">
+                <div class="stat-number" id="totalVat">0 ₪</div>
+                <div class="stat-label">סה"כ מע"מ</div>
+            </div>
+            <div class="stat-card trips">
+                <div class="stat-number" id="totalTrips">0</div>
+                <div class="stat-label">מספר הזמנות</div>
+            </div>
+            <div class="stat-card fuel">
+                <div class="stat-number" id="totalFuel">0 ליטר</div>
+                <div class="stat-label">צריכת דלק</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <h2>הוספת הזמנה חדשה</h2>
+                <form id="tripForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="employeeName">שם עובד</label>
+                            <input type="text" id="employeeName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date">תאריך</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="truckNumber">מספר משאית</label>
+                            <input type="text" id="truckNumber" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product">מוצר</label>
+                            <input type="text" id="product" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="destination">יעד</label>
+                            <input type="text" id="destination" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="transportPrice">מחיר הובלה לפני מע"מ ₪</label>
+                            <input type="number" id="transportPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fuel">סולר (ליטר)</label>
+                            <input type="number" id="fuel" step="0.1" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="notes">הערות</label>
+                            <textarea id="notes" placeholder="הזן הערות נוספות..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="price-summary" id="priceSummary" style="display: none;">
+                        <div class="price-row">
+                            <span>מחיר לפני מע"מ:</span>
+                            <span id="priceBeforeVat">0 ₪</span>
+                        </div>
+                        <div class="price-row">
+                            <span>מע"מ (17%):</span>
+                            <span id="vatAmount">0 ₪</span>
+                        </div>
+                        <div class="price-row total">
+                            <span>סה"כ כולל מע"מ:</span>
+                            <span id="totalWithVat">0 ₪</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">הוסף הזמנה</button>
+                </form>
+            </div>
+
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>רשימת הזמנות</h2>
+                </div>
+                <div class="table-container">
+                    <table id="tripsTable">
+                        <thead>
+                            <tr>
+                                <th>שם עובד</th>
+                                <th>תאריך</th>
+                                <th>מספר משאית</th>
+                                <th>מוצר</th>
+                                <th>יעד</th>
+                                <th>מחיר לפני מע"מ</th>
+                                <th>מע"מ</th>
+                                <th>סה"כ כולל מע"מ</th>
+                                <th>דלק</th>
+                                <th>הערות</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tripsTableBody">
+                        </tbody>
+                    </table>
+                    <div id="emptyState" class="empty-state">
+                        <p>אין הזמנות רשומות עדיין</p>
+                        <p>התחל בהוספת הזמנה חדשה מהטופס</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let trips = [];
+        let tripCounter = 0;
+        const VAT_RATE = 0.17; // 17% מע"מ
+
+        // הגדרת תאריך של היום כברירת מחדל
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+        // חישוב מע"מ אוטומטי
+        document.getElementById('transportPrice').addEventListener('input', updatePriceSummary);
+
+        function updatePriceSummary() {
+            const priceInput = document.getElementById('transportPrice');
+            const price = parseFloat(priceInput.value) || 0;
+            
+            if (price > 0) {
+                const vatAmount = price * VAT_RATE;
+                const totalWithVat = price + vatAmount;
+                
+                document.getElementById('priceBeforeVat').textContent = price.toLocaleString('he-IL', {minimumFractionDigits: 2}) + ' ₪';
+                document.getElementById('vatAmount').textContent = vatAmount.toLocaleString('he-IL', {minimumFractionDigits: 2}) + ' ₪';
+                document.getElementById('totalWithVat').textContent = totalWithVat.toLocaleString('he-IL', {minimumFractionDigits: 2}) + ' ₪';
+                document.getElementById('priceSummary').style.display = 'block';
+            } else {
+                document.getElementById('priceSummary').style.display = 'none';
+            }
+        }
+
+        // שליחת הטופס
+        document.getElementById('tripForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const transportPrice = parseFloat(document.getElementById('transportPrice').value);
+            const vatAmount = transportPrice * VAT_RATE;
+            const totalWithVat = transportPrice + vatAmount;
+            
+            const trip = {
+                id: ++tripCounter,
+                employeeName: document.getElementById('employeeName').value,
+                date: document.getElementById('date').value,
+                truckNumber: document.getElementById('truckNumber').value,
+                product: document.getElementById('product').value,
+                destination: document.getElementById('destination').value,
+                transportPrice: transportPrice,
+                vat: vatAmount,
+                totalWithVat: totalWithVat,
+                fuel: parseFloat(document.getElementById('fuel').value),
+                notes: document.getElementById('notes').value
+            };
+            
+            trips.push(trip);
+            updateDisplay();
+            this.reset();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('priceSummary').style.display = 'none';
+            
+            // אנימציית הצלחה
+            const btn = document.querySelector('.btn');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ ההזמנה נוספה בהצלחה';
+            btn.style.background = '#27ae60';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = 'linear-gradient(45deg, #3498db, #2980b9)';
+            }, 2000);
+        });
+
+        function updateDisplay() {
+            updateStats();
+            updateTable();
+        }
+
+        function updateStats() {
+            const totalRevenue = trips.reduce((sum, trip) => sum + trip.totalWithVat, 0);
+            const totalVat = trips.reduce((sum, trip) => sum + trip.vat, 0);
+            const totalTrips = trips.length;
+            const totalFuel = trips.reduce((sum, trip) => sum + trip.fuel, 0);
+
+            document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString('he-IL', {minimumFractionDigits: 2}) + ' ₪';
+            document.getElementById('totalVat').textContent = totalVat.toLocaleString('he-IL', {minimumFractionDigits: 2}) + ' ₪';
+            document.getElementById('totalTrips').textContent = totalTrips.toLocaleString('he-IL');
+            document.getElementById('totalFuel').textContent = totalFuel.toLocaleString('he-IL', {minimumFractionDigits: 1}) + ' ליטר';
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tripsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (trips.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = trips.map(trip => `
+                <tr>
+                    <td>${trip.employeeName}</td>
+                    <td>${formatDate(trip.date)}</td>
+                    <td>${trip.truckNumber}</td>
+                    <td>${trip.product}</td>
+                    <td>${trip.destination}</td>
+                    <td>${trip.transportPrice.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</td>
+                    <td>${trip.vat.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</td>
+                    <td><strong>${trip.totalWithVat.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</strong></td>
+                    <td>${trip.fuel.toLocaleString('he-IL', {minimumFractionDigits: 1})} ליטר</td>
+                    <td>${trip.notes || '-'}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteTrip(${trip.id})">מחק</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteTrip(id) {
+            if (confirm('האם אתה בטוח שברצונך למחוק הזמנה זו?')) {
+                trips = trips.filter(trip => trip.id !== id);
+                updateDisplay();
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('he-IL');
+        }
+
+        // אתחול התצוגה
+        updateDisplay();
+    </script>
+</body>
+</html>
